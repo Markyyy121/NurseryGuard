@@ -2,61 +2,72 @@ package com.example.nurseryguard.view
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Patterns
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
-import android.widget.Toast
+import android.view.View
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.example.nurseryguard.R
-import com.example.nurseryguard.contract.AuthContract
-import com.example.nurseryguard.presenter.AuthPresenter
+import com.example.nurseryguard.login.LoginPresenter
 
-class LoginActivity : AppCompatActivity(), AuthContract.View {
-    private lateinit var presenter: AuthPresenter
+class LoginActivity : AppCompatActivity(), LoginView {
+
+    private lateinit var presenter: LoginPresenter
+    private lateinit var progressBar: ProgressBar
+    private lateinit var etEmail: EditText
+    private lateinit var etPassword: EditText
+    private lateinit var cbRememberMe: CheckBox
+    private lateinit var btnLogin: Button
+    private lateinit var tvSignUp: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
-        presenter = AuthPresenter(this, applicationContext)
-        val tvLogin: TextView = findViewById(R.id.tvSignUp)
+        // Bind views
+        progressBar = ProgressBar(this).apply { visibility = View.GONE } // optional inline progress
+        etEmail = findViewById(R.id.etLoginEmail)
+        etPassword = findViewById(R.id.etLoginPassword)
+        cbRememberMe = findViewById(R.id.cbRememberMe)
+        btnLogin = findViewById(R.id.btnLogin)
+        tvSignUp = findViewById(R.id.tvSignUp)
 
-        tvLogin.setOnClickListener {
-            val intent = Intent(this, CreateAccountActivity::class.java)
-            startActivity(intent)
-            finish()
+        // Initialize Presenter
+        presenter = LoginPresenter(LoginModel(applicationContext))
+        presenter.attachView(this)
+
+        btnLogin.setOnClickListener {
+            presenter.login(
+                etEmail.text.toString().trim(),
+                etPassword.text.toString().trim()
+            )
         }
 
-        findViewById<Button>(R.id.btnLogin).setOnClickListener {
-            val email = findViewById<EditText>(R.id.etLoginEmail).text.toString().trim()
-            val password = findViewById<EditText>(R.id.etLoginPassword).text.toString()
-
-            // ✅ Validation
-            when {
-                email.isEmpty() -> {
-                    showAuthError("Email is required")
-                }
-                !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
-                    showAuthError("Enter a valid email address")
-                }
-                password.isEmpty() -> {
-                    showAuthError("Password is required")
-                }
-                else -> {
-                    presenter.login(email, password)
-                }
-            }
+        tvSignUp.setOnClickListener {
+            startActivity(Intent(this, RegisterActivity::class.java))
+            finish()
         }
     }
 
-    override fun showAuthSuccess(message: String) {
+    override fun onDestroy() {
+        super.onDestroy()
+        presenter.detachView()
+    }
+
+    // View responsibilities
+    override fun showLoading() {
+        progressBar.visibility = View.VISIBLE
+    }
+
+    override fun hideLoading() {
+        progressBar.visibility = View.GONE
+    }
+
+    override fun showLoginSuccess(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        startActivity(Intent(this, MonitorActivity::class.java))
+        startActivity(Intent(this, DashboardActivity::class.java))
         finish()
     }
 
-    override fun showAuthError(error: String) {
+    override fun showLoginError(error: String) {
         Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
     }
 }
